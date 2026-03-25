@@ -1,0 +1,60 @@
+services:
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME:-wordpress}
+      MARIADB_USER: ${DB_USER:-wp_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wordpress:
+    image: wordpress:6.7-php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: ${DB_NAME:-wordpress}
+      WORDPRESS_DB_USER: ${DB_USER:-wp_user}
+      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD}
+      WORDPRESS_TABLE_PREFIX: wp_
+      VIRTUAL_HOST: ${SERVICE_FQDN_WORDPRESS}
+    volumes:
+      - wp_data:/var/www/html
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.wordpress.rule=Host(`${SERVICE_FQDN_WORDPRESS}`)
+      - traefik.http.routers.wordpress.entrypoints=https
+      - traefik.http.routers.wordpress.tls=true
+      - traefik.http.routers.wordpress.tls.certresolver=letsencrypt
+      - traefik.http.services.wordpress.loadbalancer.server.port=80
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER:-wp_user}
+      PMA_PASSWORD: ${DB_PASSWORD}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.phpmyadmin.rule=Host(`${SERVICE_FQDN_PHPMYADMIN}`)
+      - traefik.http.routers.phpmyadmin.entrypoints=https
+      - traefik.http.routers.phpmyadmin.tls=true
+      - traefik.http.routers.phpmyadmin.tls.certresolver=letsencrypt
+      - traefik.http.services.phpmyadmin.loadbalancer.server.port=80
+
+volumes:
+  db_data:
+  wp_data:
