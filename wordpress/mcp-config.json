@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "elementor-mcp": {
+      "command": "npx",
+      "args": ["-y", "elementor-mcp"],
+      "env": {
+        "WP_URL": "http://localhost:8080",
+        "WP_APP_USER": "VOTRE_USERNAME_ADMIN",
+        "WP_APP_PASSWORD": "VOTRE_APPLICATION_PASSWORD"
+      }
+    }
+  }
+}
